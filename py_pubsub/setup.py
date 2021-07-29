@@ -22,6 +22,8 @@ setup(
         'console_scripts': [
             'talker = py_pubsub.publisher_member_function:main',
             'listener = py_pubsub.subscriber_member_function:main',
+            'simple = py_pubsub.simple_diff_drive:main',
+            'odom = py_pubsub.odom_diff_drive:main',
         ],
     },
 )

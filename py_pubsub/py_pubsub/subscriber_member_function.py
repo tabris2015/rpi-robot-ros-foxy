@@ -12,14 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import serial
 from time import sleep
 import rclpy
 from rclpy.node import Node
 
+import tf2_ros
+
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, PoseWithCovariance, TwistWithCovariance
 from nav_msgs.msg import Odometry
+
+@dataclass
+class SerialStatus:
+    """Class for different data given by the embedded system"""
+    left_ref_speed: float
+    right_ref_speed: float
+    left_speed:float
+    right_speed: float
+    left_effort: float
+    right_effor: float
+    x_pos: float
+    y_pos: float
+    theta: float
+    v: float
+    w: float
+
 
 class RobotControl(Node):
 
@@ -42,23 +61,29 @@ class RobotControl(Node):
         
         self.get_logger().info(f'init with state: "{self.ser.read(self.ser.in_waiting)}"')
 
-    def send_command(self, linear: float, angular: float):
+    def send_command(self, linear: float, angular: float) -> SerialStatus:
         self.get_logger().info(f'Data to send: {linear}, {angular}')
         command = f'{linear:.2f},{angular:.2f}/'.encode('UTF-8')
         self.get_logger().info(f'Sending command: {command}')
         self.ser.write(command)
         while self.ser.in_waiting == 0:
             pass
-
-        return self.ser.read(self.ser.in_waiting)
+        
+        res = self.ser.read(self.ser.in_waiting)
+        raw_list = res.split(',')
+        values_list = [float(value) for value in raw_list]
+        return SerialStatus(*values_list)
 
     def listener_callback(self, twist: Twist):
         msg = String()
+        odom_msg = Odometry()
         msg.data = 'hola!'
         self.get_logger().info(f'Received: {twist}')
         self.get_logger().info(f'Publish!')
         self.str_publisher.publish(msg)
         status = self.send_command(twist.linear.x, twist.angular.z)
+        # odom_msg.pose.pose.orientation.
+        # tf2_ros.T
         self.get_logger().info(f'Received from robot: {status}')
 
 
