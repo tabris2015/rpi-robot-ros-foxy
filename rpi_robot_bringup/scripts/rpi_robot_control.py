@@ -107,7 +107,7 @@ class RobotControlNode(Node):
         odom_msg.twist.twist.angular.z = robot_state.w
 
         # broadcast and publish
-        # self.tf_broadcaster.sendTransform(t)
+        self.tf_broadcaster.sendTransform(t)
         # self.odom_publisher.publish(odom_msg)
 
 
