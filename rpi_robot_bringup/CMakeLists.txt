@@ -43,6 +43,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/rpi_robot_echo.py
   scripts/rpi_robot_control.py
+  scripts/rpi_robot_control_nostate.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
