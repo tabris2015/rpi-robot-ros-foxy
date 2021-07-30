@@ -99,6 +99,7 @@ class RobotControlNode(Node):
         # odometry twist
         odom_msg = Odometry()
         odom_msg.header.frame_id = '/odom'
+        odom_msg.child_frame_id = '/base_link'
         odom_msg.pose.pose.position.x = robot_state.x_pos
         odom_msg.pose.pose.position.y = robot_state.y_pos
         odom_msg.pose.pose.position.z = 0.325
@@ -108,7 +109,7 @@ class RobotControlNode(Node):
 
         # broadcast and publish
         self.tf_broadcaster.sendTransform(t)
-        # self.odom_publisher.publish(odom_msg)
+        self.odom_publisher.publish(odom_msg)
 
 
     def send_command(self, linear: float, angular: float) -> SerialStatus:
