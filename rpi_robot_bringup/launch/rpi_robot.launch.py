@@ -47,7 +47,7 @@ def generate_launch_description():
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            arguments=['-0.064', '0', '0.120', '0', '0', '0', 'base_link', 'laser'],
+            arguments=['-0.064', '0', '0.120', '0', '0', '0', 'base_footprint', 'laser'],
             output='screen'
         )
     ])

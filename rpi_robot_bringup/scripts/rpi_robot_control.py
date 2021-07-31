@@ -90,7 +90,7 @@ class RobotControlNode(Node):
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = '/odom'
-        t.child_frame_id = '/base_link'
+        t.child_frame_id = '/base_footprint'
         t.transform.translation.x = robot_state.x_pos
         t.transform.translation.y = robot_state.y_pos
         t.transform.translation.z = 0.0325
@@ -99,7 +99,7 @@ class RobotControlNode(Node):
         # odometry twist
         odom_msg = Odometry()
         odom_msg.header.frame_id = '/odom'
-        odom_msg.child_frame_id = '/base_link'
+        odom_msg.child_frame_id = '/base_footprint'
         odom_msg.pose.pose.position.x = robot_state.x_pos
         odom_msg.pose.pose.position.y = robot_state.y_pos
         odom_msg.pose.pose.position.z = 0.325
