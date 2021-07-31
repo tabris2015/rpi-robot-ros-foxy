@@ -14,7 +14,7 @@
 
   <xacro:property name="caster_xoff" value="0.12"/>
 <!-- Robot Base -->
-  <link name="base_footprint">
+  <link name="base_link">
     <visual>
       <geometry>
         <box size="${base_length} ${base_width} ${base_height}"/>
@@ -25,11 +25,11 @@
     </visual>
   </link>
 <!-- Robot Footprint -->
-  <link name="base_footprint"/>
+  <link name="base_link"/>
 
   <joint name="base_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_footprint"/>
+    <parent link="base_link"/>
+    <child link="base_link"/>
     <origin xyz="0.0 0.0 ${-(wheel_radius+wheel_zoff)}" rpy="0 0 0"/>
   </joint>
 
@@ -48,7 +48,7 @@
     </link>
 
     <joint name="${prefix}_joint" type="continuous">
-      <parent link="base_footprint"/>
+      <parent link="base_link"/>
       <child link="${prefix}_link"/>
       <origin xyz="${x_reflect*wheel_xoff} ${y_reflect*(base_width/2+wheel_ygap)} ${-wheel_zoff}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
@@ -70,7 +70,7 @@
   </link>
 
   <joint name="caster_joint" type="fixed">
-    <parent link="base_footprint"/>
+    <parent link="base_link"/>
     <child link="caster"/>
     <origin xyz="${caster_xoff} 0.0 ${-(base_height/2)}" rpy="0 0 0"/>
   </joint>
