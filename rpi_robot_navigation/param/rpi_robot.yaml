@@ -11,7 +11,7 @@ amcl:
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
     do_beamskip: false
-    global_frame_id: "/map"
+    global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
@@ -49,7 +49,8 @@ amcl_rclcpp_node:
 bt_navigator:
   ros__parameters:
     use_sim_time: False
-    bt_xml_filename: "bt_navigator.xml"
+    robot_base_frame: "base_footprint"
+    bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
 
 dwb_controller:
   ros__parameters:
@@ -93,7 +94,8 @@ local_costmap:
   local_costmap:
     ros__parameters:
       use_sim_time: False
-      global_frame: odom
+      global_frame: "odom"
+      robot_base_frame: "base_footprint"
       plugin_names: ["obstacle_layer", "inflation_layer"]
       plugin_types: ["nav2_costmap_2d::ObstacleLayer", "nav2_costmap_2d::InflationLayer"]
       rolling_window: true
@@ -123,6 +125,7 @@ global_costmap:
     ros__parameters:
       use_sim_time: False
       robot_radius: 0.105
+      robot_base_frame: base_footprint
       obstacle_layer:
         enabled: True
       always_send_full_costmap: True
