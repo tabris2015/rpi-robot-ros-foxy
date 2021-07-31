@@ -22,7 +22,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 install(
-  DIRECTORY launch param
+  DIRECTORY launch param map
   DESTINATION share/${PROJECT_NAME}
 )
 
