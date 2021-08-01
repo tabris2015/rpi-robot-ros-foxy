@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'go_to_goal = rpi_robot_control.go_to_goal:main',
         ],
     },
 )
