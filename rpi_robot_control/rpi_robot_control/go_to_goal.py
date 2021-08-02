@@ -8,9 +8,11 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
 
 from rpi_robot_action_interfaces.action import GoToGoal
 from rpi_robot_control.pid import PidController
+from rpi_robot_control.lidar import Lidar
 
 
 class GoToGoalNode(Node):
@@ -25,7 +27,7 @@ class GoToGoalNode(Node):
             10
         )
 
-        self.get_logger().info("creating subscriber...")
+        self.get_logger().info("creating odometry subscriber...")
         self.odom_subscription = self.create_subscription(
             Odometry,
             'odom',
@@ -33,6 +35,16 @@ class GoToGoalNode(Node):
             10
         )
         self.odom_subscription
+
+        self.get_logger().info("creating laser subscriber...")
+        self.lidar_subscription = self.create_subscription(
+            LaserScan,
+            'scan',
+            self.lidar_callback,
+            10
+        )
+        self.lidar_subscription
+        self.lidar = Lidar()
 
         self.get_logger().info("creating action server...")
         self.go_to_goal_action_service = ActionServer(
@@ -73,6 +85,8 @@ class GoToGoalNode(Node):
         self.current_theta = self.get_euler_from_quaternion(odom.pose.pose.orientation)[2]
         # self.get_logger().info(f'Current Position: ({self.current_x}, {self.current_y}, {self.current_theta})')
 
+    def lidar_callback(self, scan: LaserScan):
+        self.lidar.update(self, scan)
 
     def add_two_callback(self, request, response):
         response.sum = request.a + request.b
@@ -131,25 +145,19 @@ class GoToGoalNode(Node):
 
 
     def update_control_loop(self):
-        # compute error
-        error_x = self.goal_x - self.current_x
-        error_y = self.goal_y - self.current_y
+        # get direction vectors for both behaviors
+        gtg_u_x, gtg_u_y = self.go_to_goal_loop()
+        ao_u_x, ao_u_y = self.avoid_obstacle_loop()
 
-        # compute K for linear velocity
-        distance_to_goal = self.get_distance_to_goal()
+        # TODO: blending
+        u_x = gtg_u_x
+        u_y = gtg_u_y
 
-        if distance_to_goal <= self.pos_tolerance:
+        if self.get_distance_to_goal() <= self.pos_tolerance:
             self.linear_command = 0
             self.angular_command = 0
-            self.get_logger().info(f"Already near goal, distance: {distance_to_goal}")
+            self.get_logger().info(f"Already near goal, distance: {self.get_distance_to_goal()}")
             return True     # goal reached!
-
-        
-        K = self.max_linear_v * (1 - math.exp(-self.alpha * (distance_to_goal * distance_to_goal))) / (distance_to_goal * distance_to_goal)
-
-        # compute control signal
-        u_x = K * error_x
-        u_y = K * error_y
 
         # input to angle pid
         self.angle_pid.set_input(self.current_theta)
@@ -165,7 +173,30 @@ class GoToGoalNode(Node):
 
         return False
 
-    
+
+    def get_go_to_goal_vector(self):
+        error_x = self.goal_x - self.current_x
+        error_y = self.goal_y - self.current_y
+
+        # compute K for linear velocity
+        distance_to_goal = self.get_distance_to_goal()
+
+        K = self.max_linear_v * (1 - math.exp(-self.alpha * (distance_to_goal * distance_to_goal))) / (distance_to_goal * distance_to_goal)
+
+        # compute control signal
+        u_x = K * error_x
+        u_y = K * error_y
+
+        return u_x, u_y
+        
+
+        return linear, angular
+
+
+    def get_avoid_obstacle_vector(self, obstacles):
+        
+        return 0, 0
+
 
     def get_distance_to_goal(self):
         return math.sqrt(math.pow(self.goal_x - self.current_x, 2) + math.pow(self.goal_y - self.current_y, 2))
