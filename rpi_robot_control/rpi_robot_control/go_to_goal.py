@@ -1,3 +1,4 @@
+from os import times
 import rclpy
 import time
 import math
@@ -6,13 +7,17 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from tf2_ros import TransformBroadcaster
+
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Quaternion, TransformStamped
 from sensor_msgs.msg import LaserScan
 
 from rpi_robot_action_interfaces.action import GoToGoal
 from rpi_robot_control.pid import PidController
 from rpi_robot_control.lidar import Lidar
+
+
 
 
 class GoToGoalNode(Node):
@@ -44,7 +49,7 @@ class GoToGoalNode(Node):
             10
         )
         self.lidar_subscription
-        self.lidar = Lidar()
+        self.lidar = Lidar(self)
 
         self.get_logger().info("creating action server...")
         self.go_to_goal_action_service = ActionServer(
@@ -57,6 +62,8 @@ class GoToGoalNode(Node):
             cancel_callback=self.cancel_callback
         )
 
+        # transform
+        self.tf_broadcaster = TransformBroadcaster(self)
         # important variables
         self.is_moving = False
         self.pos_tolerance = 0.05
@@ -65,9 +72,19 @@ class GoToGoalNode(Node):
         self.current_x = 0
         self.current_y = 0
 
+        self.gtg_r = 0
+        self.gtg_theta = 0
+        self.ao_r = 0
+        self.ao_theta = 0
+        self.theta_desired = 0
+        self.r_desired = 0
+
         self.sample_time = 0.1
         self.max_linear_v = 0.08
         self.alpha = 5
+        self.blend_dist_threshold = 0.4 # m
+        self.avoid_dist_threshold = 0.2
+        self.avoid_angle_threshold = math.pi / 2.0
         self.angle_pid = PidController(0.3, 0.01, 0.002, self.sample_time, True)
         self.angle_pid.set_output_limits(-3, 3)
 
@@ -77,16 +94,24 @@ class GoToGoalNode(Node):
         self.angular_command = 0
 
         ## logging utils
-        
+
 
     def odom_callback(self, odom: Odometry):
         self.current_x = odom.pose.pose.position.x
         self.current_y = odom.pose.pose.position.y
         self.current_theta = self.get_euler_from_quaternion(odom.pose.pose.orientation)[2]
         # self.get_logger().info(f'Current Position: ({self.current_x}, {self.current_y}, {self.current_theta})')
+        # get direction vectors for both behaviors
+        # self.get_logger().info('get "go-to-goal" vector')
+        self.gtg_r, self.gtg_theta = self.get_go_to_goal_vector()
+        # self.get_logger().info('get "avoid obstacle" vector')
+        self.ao_r, self.ao_theta = self.get_obstacle_vector()
+
+        self.publish_ref_vectors()
+        
 
     def lidar_callback(self, scan: LaserScan):
-        self.lidar.update(self, scan)
+        self.lidar.update(scan)
 
     def add_two_callback(self, request, response):
         response.sum = request.a + request.b
@@ -125,6 +150,7 @@ class GoToGoalNode(Node):
             feedback_msg.current_y = self.current_x
             feedback_msg.distance = self.get_distance_to_goal()
             self.get_logger().info(f'current pos: {feedback_msg.current_x},{feedback_msg.current_y}, distance to goal: {self.get_distance_to_goal()}')
+            self.get_logger().info(f'go_to_goal: [{self.gtg_r:.2f},{self.gtg_theta:.2f}], avoid obstacle: [{self.ao_r:.2f},{self.ao_theta:.2f}], desired: [{self.r_desired:.2f},{self.theta_desired:.2f}]')
             self.send_twist_command()
             goal_handle.publish_feedback(feedback_msg)
             log_str = f'{int(time.time() * 1000)},{self.current_x},{self.current_y},{self.get_distance_to_goal()},{self.linear_command},{self.angular_command}\n'
@@ -145,13 +171,32 @@ class GoToGoalNode(Node):
 
 
     def update_control_loop(self):
-        # get direction vectors for both behaviors
-        gtg_u_x, gtg_u_y = self.go_to_goal_loop()
-        ao_u_x, ao_u_y = self.avoid_obstacle_loop()
+        
 
         # TODO: blending
-        u_x = gtg_u_x
-        u_y = gtg_u_y
+        self.r_desired = self.gtg_r
+        # arctan2(r2sin(ϕ2−ϕ1),r1+r2cos(ϕ2−ϕ1))
+        delta_theta = self.gtg_theta - self.ao_theta
+        delta_theta = math.atan2(math.sin(delta_theta), math.cos(delta_theta))
+
+        
+        if self.ao_r <= self.avoid_dist_threshold:
+            # too close, avoid
+            avoid_theta = self.ao_theta + math.pi
+            avoid_theta = math.atan2(math.sin(avoid_theta), math.cos(avoid_theta))
+            self.theta_desired = avoid_theta
+
+        elif self.ao_r > self.avoid_dist_threshold and self.ao_r <= self.blend_dist_threshold and abs(delta_theta) < self.avoid_angle_threshold:
+            # blend perpendicular
+            avoid_theta = self.ao_theta + (math.copysign(1, delta_theta)) * (math.pi / 2.0) 
+            avoid_theta = math.atan2(math.sin(avoid_theta), math.cos(avoid_theta))
+            self.theta_desired = self.gtg_theta + math.atan2(self.ao_r * math.sin(self.ao_theta - self.gtg_theta), self.gtg_r + self.ao_r * math.cos(self.ao_theta - self.gtg_theta))
+        
+        else:
+            self.theta_desired = self.gtg_theta
+
+        #-------
+        
 
         if self.get_distance_to_goal() <= self.pos_tolerance:
             self.linear_command = 0
@@ -162,14 +207,13 @@ class GoToGoalNode(Node):
         # input to angle pid
         self.angle_pid.set_input(self.current_theta)
         # setpoint
-        theta_goal = math.atan2(u_y, u_x)
-        self.angle_pid.set_setpoint(theta_goal)
+        self.angle_pid.set_setpoint(self.theta_desired)
 
         # compute pid
         self.angle_pid.compute()
 
-        self.linear_command = math.sqrt((u_x * u_x) + (u_x * u_x))
-        self.angular_command = self.angle_pid.get_output()
+        self.linear_command = self.r_desired
+        self.angular_command = self.angle_pid.get_output()      # from pid
 
         return False
 
@@ -177,26 +221,25 @@ class GoToGoalNode(Node):
     def get_go_to_goal_vector(self):
         error_x = self.goal_x - self.current_x
         error_y = self.goal_y - self.current_y
-
+        # self.get_logger().info(f'gtg error: ({error_x}, {error_y})')
         # compute K for linear velocity
         distance_to_goal = self.get_distance_to_goal()
+        # self.get_logger().info(f'gtg distance: {distance_to_goal}')
 
-        K = self.max_linear_v * (1 - math.exp(-self.alpha * (distance_to_goal * distance_to_goal))) / (distance_to_goal * distance_to_goal)
+        K = (self.max_linear_v * (1 - math.exp(-self.alpha * (distance_to_goal * distance_to_goal))) / (distance_to_goal * distance_to_goal)) if distance_to_goal > 0.0001 else 0
 
         # compute control signal
         u_x = K * error_x
         u_y = K * error_y
 
-        return u_x, u_y
-        
+        # convert to polar coordinates 
+        r = math.sqrt((u_x * u_x) + (u_y * u_y))
+        theta = math.atan2(u_y, u_x)
+        return r, theta
 
-        return linear, angular
-
-
-    def get_avoid_obstacle_vector(self, obstacles):
-        
-        return 0, 0
-
+    def get_obstacle_vector(self):
+        r_obs, theta_obs = self.lidar.get_closest_obstacle()
+        return r_obs, theta_obs
 
     def get_distance_to_goal(self):
         return math.sqrt(math.pow(self.goal_x - self.current_x, 2) + math.pow(self.goal_y - self.current_y, 2))
@@ -220,12 +263,56 @@ class GoToGoalNode(Node):
 
         return roll, pitch, yaw
 
+    def quaternion_from_euler(self, roll, pitch, yaw) -> Quaternion:
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
+
+        q = Quaternion()
+        q.w = cy * cp * cr + sy * sp * sr
+        q.x = cy * cp * sr - sy * sp * cr
+        q.y = sy * cp * sr + cy * sp * cr
+        q.z = sy * cp * cr - cy * sp * sr
+
+        return q
+
     def send_twist_command(self):
         twist_msg = Twist()
         twist_msg.linear.x = float(self.linear_command)
         twist_msg.angular.z = float(self.angular_command)
         self.get_logger().info(f'Publishing twist: {twist_msg}')
         self.twist_publisher.publish(twist_msg)
+
+    def publish_ref_vectors(self):
+        timestamp = self.get_clock().now().to_msg()
+        t_goal = TransformStamped()
+        t_goal.header.stamp = timestamp
+        t_goal.header.frame_id = '/base_link'
+        t_goal.child_frame_id = '/gtg'
+
+        t_goal.transform.rotation = self.quaternion_from_euler(0, 0, self.gtg_theta)
+
+        t_obstacle = TransformStamped()
+        t_obstacle.header.stamp = timestamp
+        t_obstacle.header.frame_id = '/base_link'
+        t_obstacle.child_frame_id = '/ao'
+
+        t_obstacle.transform.rotation = self.quaternion_from_euler(0, 0, self.ao_theta)
+
+        t_desired = TransformStamped()
+        t_desired.header.stamp = timestamp
+        t_desired.header.frame_id = '/base_link'
+        t_desired.child_frame_id = '/desired'
+
+        t_desired.transform.rotation = self.quaternion_from_euler(0, 0, self.theta_desired)
+        # self.get_logger().info('Publishing transforms for vectors')
+        self.tf_broadcaster.sendTransform(t_goal)
+        self.tf_broadcaster.sendTransform(t_obstacle)
+        self.tf_broadcaster.sendTransform(t_desired)
+
 
 def main(args=None):
     rclpy.init(args=args)

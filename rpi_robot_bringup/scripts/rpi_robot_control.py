@@ -87,7 +87,7 @@ class RobotControlNode(Node):
 
         robot_orientation = quaternion_from_euler(0, 0, robot_state.theta)
         timestamp = self.get_clock().now().to_msg()
-        # transform
+        # transforms
         t = TransformStamped()
         t.header.stamp = timestamp
         t.header.frame_id = '/odom'
@@ -96,7 +96,7 @@ class RobotControlNode(Node):
         t.transform.translation.y = robot_state.y_pos
         t.transform.translation.z = 0.0325
         t.transform.rotation = robot_orientation
-
+        
         # odometry twist
         odom_msg = Odometry()
         odom_msg.header.frame_id = '/odom'
