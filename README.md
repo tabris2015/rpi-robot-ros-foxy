@@ -60,6 +60,6 @@ This component are implemented in a single node called go_to_goal.py. There are 
 This package contains a set of launchfiles for running a slam task using google cartographer package together with the laser scan readings from the robot and the joystick teleoperation packages. The original goal was to use the map generated with this package to localize and navigate the robot but this was not accomplished.
 
 This functionality is shown in the folloWing video:
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=HkA1nDBC58c
-" target="_blank"><img src="http://img.youtube.com/vi/HkA1nDBC58c/0.jpg" 
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=axCvY-ANDVI
+" target="_blank"><img src="http://img.youtube.com/vi/axCvY-ANDVI/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
