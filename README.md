@@ -34,7 +34,7 @@ major components:
   - **rpi_robot.launch.py:** Launchfile that runs both the control node and the lidar node. The lidar node connects with the 2D lidar sensor and publishes a laserscan message to the /scan topic. The launchfile also inits a static transform publisher for publishing the static transform between the base link of the robot and the laser scanner.
   - **rpi_robot_joy_teleop.launch.py:** This launchfile runs the joy node for connecting with a joystick and then the teleop_joy node with a custom config file mapped for using a DualShock4 controller. This launchfile gives teleoperation capabilities to the robot.
 
-#### rpi_robot_action_interfaces
+#### [rpi_robot_action_interfaces](rpi_robot_action_interfaces)
 This robot uses ROS actions in order to get the desired position of the robot for navigation. This package defines a custom action interface for controlling the position of the robot, this action interface has the following structure:
 
   - **Goal**: it has two float numbers representing position x, y (in meters) for the desired robot position.
@@ -43,7 +43,7 @@ This robot uses ROS actions in order to get the desired position of the robot fo
 
 Once this package is built using colcon tool, the action interface is available in the current workspace.
 
-#### rpi_robot_control
+#### [rpi_robot_control](rpi_robot_control)
 This package implements a high level reactive-based control for navigating the robot. It has two defined behaviors:
 
   - **Go-to-goal**: this behavior generates a vector for the robot to pursue that indicates the direction in which the goal is located. The resulting vector is used to compute the reference to the heading and the linear velocity for the robot. 
@@ -56,5 +56,10 @@ All these behavior is executed inside a ROS node that also creates an action ser
 This component are implemented in a single node called go_to_goal.py. There are also two python modules with a PID controller implementation and also with a lidar abstraction layer for the avoid obstacle vector calculation.
 
 
-#### rpi_robot_slam
+#### [rpi_robot_slam](rpi_robot_slam)
 This package contains a set of launchfiles for running a slam task using google cartographer package together with the laser scan readings from the robot and the joystick teleoperation packages. The original goal was to use the map generated with this package to localize and navigate the robot but this was not accomplished.
+
+This functionality is shown in the folloWing video:
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=HkA1nDBC58c
+" target="_blank"><img src="http://img.youtube.com/vi/HkA1nDBC58c/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
