@@ -1,6 +1,13 @@
 # rpi robot ros2 packages
+
+> This project is part of the subject "Autonomous Mobile Robots - SSC5888", Sao Paulo University - PPG CCMC. 
+
+> Student: Jose Eduardo Laruta Espejo
+
+> Professor: Fernando Santos Osorio PhD.
+
 This repo has all the ros2 packages needed for running a reactive navigation system based 
-on feedback control.
+on feedback control. 
 
 ## Robot architecture
 ![architecture](img/arquitectura.png)
@@ -34,6 +41,14 @@ major components:
   - **rpi_robot.launch.py:** Launchfile that runs both the control node and the lidar node. The lidar node connects with the 2D lidar sensor and publishes a laserscan message to the /scan topic. The launchfile also inits a static transform publisher for publishing the static transform between the base link of the robot and the laser scanner.
   - **rpi_robot_joy_teleop.launch.py:** This launchfile runs the joy node for connecting with a joystick and then the teleop_joy node with a custom config file mapped for using a DualShock4 controller. This launchfile gives teleoperation capabilities to the robot.
 
+The odometry and teleop functionality can be observed in the following video:
+
+--
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=HkA1nDBC58c
+" target="_blank"><img src="http://img.youtube.com/vi/HkA1nDBC58c/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+--
+
 #### [rpi_robot_action_interfaces](rpi_robot_action_interfaces)
 This robot uses ROS actions in order to get the desired position of the robot for navigation. This package defines a custom action interface for controlling the position of the robot, this action interface has the following structure:
 
@@ -42,6 +57,15 @@ This robot uses ROS actions in order to get the desired position of the robot fo
   - **Feedback**: the feedback message contains the current position, x, y and the distance remaining to the goal in meters for monitoring purposes. With this continous feedback we can plot the trajectories or analyze the behavior of the robot.
 
 Once this package is built using colcon tool, the action interface is available in the current workspace.
+
+A demo of the navigation can be observed in the following video:
+
+--
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=Iowo95nR5eU
+" target="_blank"><img src="http://img.youtube.com/vi/Iowo95nR5eU/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+--
+
 
 #### [rpi_robot_control](rpi_robot_control)
 This package implements a high level reactive-based control for navigating the robot. It has two defined behaviors:
