@@ -34,7 +34,7 @@ Relative to other hardware aspects, a single 11.1V lipo batter was used to power
 ## Control architecture
 ![control](img/control.png)
 The control architecture for the robot is based on purely reactive behaviors implemented in a series of feedback loops.
-In the figure, we can observe how the references are computed in a hierarchical way. There two main control loops implemented:
+In the figure, we can observe how the references are computed in a hierarchical way. There are two main control loops implemented:
 
   - **Wheel velocities control**: Each motor is controlled by a PID controller which receives a reference angular velocity in rad/s and that has a sample time of 20ms. These controllers are running inside the Raspberry pi Pico microcontroller that controls the motor driver directly and receives the pulses from the corresponding magnetic encoders present in each motor shaft.
   - **Differential drive kinematics**: The microcontroller only receives linear (m/s) and angular(rad/s) velocities and there is an intermediate step that transforms these commands to the corresponding left and right desired angular velocity. A simplified differential drive model is used for this purpose.
@@ -70,13 +70,6 @@ This robot uses ROS actions in order to get the desired position of the robot fo
 
 Once this package is built using colcon tool, the action interface is available in the current workspace.
 
-A demo of the navigation can be observed in the following video:
-
---
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=Iowo95nR5eU
-" target="_blank"><img src="http://img.youtube.com/vi/Iowo95nR5eU/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
---
 
 
 #### [rpi_robot_control](rpi_robot_control)
@@ -90,6 +83,14 @@ The linear and angular velocity references are sent to the robot publishing in t
 All these behavior is executed inside a ROS node that also creates an action server that receives goal commands described previously and also provides feedback. 
 
 This component are implemented in a single node called go_to_goal.py. There are also two python modules with a PID controller implementation and also with a lidar abstraction layer for the avoid obstacle vector calculation.
+
+A demo of the navigation can be observed in the following video:
+
+--
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=Iowo95nR5eU
+" target="_blank"><img src="http://img.youtube.com/vi/Iowo95nR5eU/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+--
 
 
 #### [rpi_robot_slam](rpi_robot_slam)
