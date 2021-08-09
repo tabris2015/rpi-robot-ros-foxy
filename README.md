@@ -29,7 +29,7 @@ The robot was built using two main computing plaforms for different cases:
 
 Relative to other hardware aspects, a single 11.1V lipo batter was used to power the entire system: motors, microcontroller, single board computer, with the help of a buck converter that transforms the incoming voltage from the battery to steady 5v. Furthermore, the robot chassis consist of two 3d printed parts printed in PLA, apart from that some nuts an bolts were used.
 
-
+![arch](img/arch.png)
 
 ## Control architecture
 ![control](img/control.png)
