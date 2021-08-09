@@ -16,6 +16,21 @@ in an embedded system which has the responsibility of real-time control, this lo
 microcontroller (Raspberry pi Pico). Then, the high level control is implemented using ROS2 Foxy through different packages, nodes
 and launchfiles. This high level control is running on a Raspberry Pi 4 single board computer.
 
+### Robot hardware
+The robot was built using two main computing plaforms for different cases:
+
+  1. **Real-Time control**: This part was implemented in a Raspberry pi Pico Microcontroller. The microcontroller is in charge of interfacing with the DC motors for traction through a motor driver, it uses PWM signals and digital I/O for this. Also, the microcontroller reads the pulses from the two magnetic incremental encoders. With this pulses and a kinematic model, the odometry of the robot is computed. Then, the microcontroller also implements a simple serial interface for receiving velocity commands and sending the odometry information back.
+  ![top_pico](img/top_pico.png)
+  ![bot_pico](img/bot_pico.png)
+  All the firmware and low level code was made using C++ with the official Raspberry pi Pico SDK. The code for this module can be found in this [repo](https://github.com/tabris2015/differential-drive-rpi-pico)
+
+  2. **High Level control**: The high level control was implemented in a Raspberry pi Single board computer with the needed compute capabilities for running a full fledged linux distribution (Ubuntu 20.04) and the base ROS2 stack (Foxy). The computer is connected to a RPlidar sensor through USB and to the microcontroller to USB with a virtual serial port.
+  ![robot](img/robot.png)
+
+Relative to other hardware aspects, a single 11.1V lipo batter was used to power the entire system: motors, microcontroller, single board computer, with the help of a buck converter that transforms the incoming voltage from the battery to steady 5v. Furthermore, the robot chassis consist of two 3d printed parts printed in PLA, apart from that some nuts an bolts were used.
+
+
+
 ## Control architecture
 ![control](img/control.png)
 The control architecture for the robot is based on purely reactive behaviors implemented in a series of feedback loops.
@@ -25,6 +40,7 @@ In the figure, we can observe how the references are computed in a hierarchical 
   - **Differential drive kinematics**: The microcontroller only receives linear (m/s) and angular(rad/s) velocities and there is an intermediate step that transforms these commands to the corresponding left and right desired angular velocity. A simplified differential drive model is used for this purpose.
   - **Orientation PID**: Since the most critical parameter of motion of the robot is the orientation or heading, another PID controller is in charge of moving the robot to the desired orientation. This controller takes a desired heading angle and compares it to the current heading of the robot and sends a desired angular velocity to the lower layer.
   - **Linear Velocity Control Law**: For the linear velocity reference, a exponential function is used. This function returns a velocity that decreases proportional to the distance to the current goal. The control law is given by the following formula: $ K = \frac{v_0(1 - e^{-\alpha dist^2})}{dist}$
+
 ### Robot ROS2 packages
 The high level control consists of several ROS2 packages:
 
